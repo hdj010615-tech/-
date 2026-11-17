@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>치이카와 & 친구들 말랑말랑 장난치기</title>
+    <style>
+        /* ============================================================================
+         * 1. 기본 초기화 및 모바일 터치 잠금 레이아웃
+         * ============================================================================ */
+        * {
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #FEF3C7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        #app-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            max-width: 720px;
+            max-height: 880px;
+            background-color: #FFFDF7;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 45px rgba(59, 35, 20, 0.22);
+        }
+        @media (min-width: 640px) {
+            #app-wrapper {
+                height: 94vh;
+                border-radius: 28px;
+                border: 4px solid #3b2314;
+            }
+        }
+
+        /* ============================================================================
+         * 2. 상단 헤더 (캐릭터 전환 탭 + 장난/애정 카운터 + 사운드 버튼)
+         * ============================================================================ */
+        #top-bar {
+            background-color: #FEF9C3;
+            border-bottom: 3.5px solid #3b2314;
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+        }
+        .top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        /* 캐릭터 선택 탭 */
+        .char-tabs {
+            display: flex;
+            gap: 6px;
+            flex: 1;
+        }
+        .char-tab {
+            flex: 1;
+            background-color: #FFFFFF;
+            border: 2.5px solid #3b2314;
+            border-radius: 14px;
+            padding: 6px 6px;
+            font-size: 13px;
+            font-weight: 900;
+            color: #3b2314;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #3b2314;
+            transition: transform 0.08s ease, background-color 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .char-tab:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #3b2314;
+        }
+        .char-tab.active[data-char="usagi"] {
+            background-color: #FDE047;
+        }
+        .char-tab.active[data-char="chiikawa"] {
+            background-color: #FBCFE8;
+        }
+        .char-tab.active[data-char="hachiware"] {
+            background-color: #BAE6FD;
+        }
+        .mute-btn {
+            width: 38px;
+            height: 38px;
+            background-color: #FED7AA;
+            border: 2.5px solid #3b2314;
+            border-radius: 12px;
+            box-shadow: 0 3px 0 #3b2314;
+            font-size: 17px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .mute-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #3b2314;
+        }
+
+        /* 반응 카운터 & 말랑 게이지 */
+        .status-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #3b2314;
+            border-radius: 999px;
+            padding: 4px 12px;
+        }
+        .gauge-label {
+            font-size: 12px;
+            font-weight: 800;
+            color: #3b2314;
+            white-space: nowrap;
+        }
+        .gauge-track {
+            flex: 1;
+            height: 12px;
+            background-color: #E5E7EB;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1.5px solid rgba(59, 35, 20, 0.3);
+        }
+        #tease-gauge-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #F59E0B, #EC4899);
+            border-radius: 999px;
+            transition: width 0.15s ease-out;
+        }
+        .counter-badge {
+            font-size: 12px;
+            font-weight: 900;
+            color: #D97706;
+            white-space: nowrap;
+        }
+
+        /* ============================================================================
+         * 3. 메인 인터랙티브 캔버스 영역
+         * ============================================================================ */
+        .canvas-area {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        canvas#stageCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            cursor: pointer;
+        }
+        #guide-pill {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(255, 255, 255, 0.92);
+            border: 2px solid #3b2314;
+            border-radius: 999px;
+            padding: 5px 14px;
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #3b2314;
+            white-space: nowrap;
+            pointer-events: none;
+            box-shadow: 0 3px 0 rgba(59, 35, 20, 0.14);
+        }
+
+        /* ============================================================================
+         * 4. 하단 4종 장난 도구 선택 바
+         * ============================================================================ */
+        #tool-dock {
+            background-color: #FDE68A;
+            border-top: 3.5px solid #3b2314;
+            padding: 10px 12px 14px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            z-index: 10;
+        }
+        .tool-btn {
+            background-color: #FFFFFF;
+            border: 2.5px solid #3b2314;
+            border-radius: 16px;
+            padding: 8px 4px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #3b2314;
+            transition: transform 0.08s ease, background-color 0.12s ease;
+        }
+        .tool-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #3b2314;
+        }
+        .tool-btn.active {
+            background-color: #FACC15;
+            transform: translateY(1px);
+            box-shadow: 0 3px 0 #3b2314;
+        }
+        .tool-btn.active[data-tool="pinch"] { background-color: #FDBA74; }
+        .tool-btn.active[data-tool="pat"] { background-color: #F9A8D4; }
+        .tool-btn.active[data-tool="hammer"] { background-color: #FCA5A5; }
+        .tool-icon {
+            font-size: 22px;
+            line-height: 1.1;
+        }
+        .tool-name {
+            font-size: 12px;
+            font-weight: 900;
+            color: #3b2314;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app-wrapper">
+        <!-- 상단 캐릭터 전환 및 반응 게이지 바 -->
+        <header id="top-bar">
+            <div class="top-row">
+                <div class="char-tabs">
+                    <button type="button" class="char-tab active" data-char="usagi">🐰 우사기</button>
+                    <button type="button" class="char-tab" data-char="chiikawa">🐹 치이카와</button>
+                    <button type="button" class="char-tab" data-char="hachiware">🐱 하치와레</button>
+                </div>
+                <button type="button" id="mute-btn" class="mute-btn" title="소리 켜기/끄기">🔊</button>
+            </div>
+            <div class="status-row">
+                <span id="gauge-title" class="gauge-label">말랑 게이지</span>
+                <div class="gauge-track">
+                    <div id="tease-gauge-bar"></div>
+                </div>
+                <span id="reaction-counter" class="counter-badge">장난 0회</span>
+            </div>
+        </header>
+
+        <!-- 메인 인터랙티브 스테이지 -->
+        <main class="canvas-area">
+            <div id="guide-pill">👆 캐릭터를 톡톡 터치해서 콕콕 찔러보세요!</div>
+            <canvas id="stageCanvas"></canvas>
+        </main>
+
+        <!-- 하단 4가지 도구 선택 바 -->
+        <footer id="tool-dock">
+            <button type="button" class="tool-btn active" data-tool="poke">
+                <span class="tool-icon">👆</span>
+                <span class="tool-name">콕콕 찌르기</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="pinch">
+                <span class="tool-icon">🤏</span>
+                <span class="tool-name">볼 늘리기</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="pat">
+                <span class="tool-icon">👋</span>
+                <span class="tool-name">쓰다듬기</span>
+            </button>
+            <button type="button" class="tool-btn" data-tool="hammer">
+                <span class="tool-icon">🔨</span>
+                <span class="tool-name">뿅망치</span>
+            </button>
+        </footer>
+    </div>
+
+    <script>
+        (function () {
+            'use strict';
+
+            /**
+             * ============================================================================
+             * 1. 캐릭터별 고유 설정 (우사기 / 치이카와 / 하치와레)
+             * ============================================================================
+             */
+            const CHARACTERS = {
+                usagi: {
+                    id: 'usagi',
+                    name: '우사기',
+                    bgTop: '#FEF9C3',
+                    bgBottom: '#FDE68A',
+                    floorColor: '#FACC15',
+                    pitch: 1.05,
+                    lines: {
+                        poke: ['야하?!', '푸르르!', '하아?!', '우라!', '간지러워!'],
+                        pinch: ['우야야야~!', '볼 늘어난다~!', '푸르르르!', '말랑말랑~'],
+                        pat: ['야하~ 기분 좋아♪', '우라라~♡', '더 쓰다듬어줘!', '흐흥~♪'],
+                        hammer: ['우라라락!!', '하아?! 뿅!', '어질어질~💫', '이야하?!']
+                    }
+                },
+                chiikawa: {
+                    id: 'chiikawa',
+                    name: '치이카와',
+                    bgTop: '#FCE7F3',
+                    bgBottom: '#FBCFE8',
+                    floorColor: '#F472B6',
+                    pitch: 1.28,
+                    lines: {
+                        poke: ['와앗?!', '으앙!', '깜짝이야!', '에헤?!', '아야!'],
+                        pinch: ['으에엥~!', '볼따구 아파~!', '말랑말랑~', '놓아줘어~'],
+                        pat: ['에헤헤~♡', '따뜻해~♪', '기분 좋아!', '응! 좋아해♡'],
+                        hammer: ['으에에엥!!💦', '어지러워~💫', '너무해~!', '히잉~']
+                    }
+                },
+                hachiware: {
+                    id: 'hachiware',
+                    name: '하치와레',
+                    bgTop: '#E0F2FE',
+                    bgBottom: '#BAE6FD',
+                    floorColor: '#38BDF8',
+                    pitch: 0.96,
+                    lines: {
+                        poke: ['와앗!', '간지러워~!', '에헤헤!', '뭐야뭐야?!', '깜짝이야!'],
+                        pinch: ['우와아~ 늘어난다!', '모찌 같아~!', '어떻게든 될 거야~!', '볼이 쭈욱~'],
+                        pat: ['야호~ 최고야!♡', '기분 좋아져!', '고마워~♪', '노래 부를까?♪'],
+                        hammer: ['으앗! 뿅망치다!', '별이 보여~💫', '난토카나레~!', '아야야!']
+                    }
+                }
+            };
+
+            const TOOL_GUIDES = {
+                poke: '👆 캐릭터를 톡톡 터치하거나 클릭해서 콕콕 찔러보세요!',
+                pinch: '🤏 볼이나 얼굴 근처를 잡고 쭉~ 드래그해서 늘려보세요!',
+                pat: '👋 머리 위를 문질문질 드래그해서 쓰다듬어 주세요!',
+                hammer: '🔨 캐릭터를 톡! 때려서 뿅망치로 날려보세요!'
+            };
+
+            /**
+             * ============================================================================
+             * 2. Web Audio API 합성 사운드 매니저 (외부 파일 불필요)
+             * ============================================================================
+             */
+            class SoundFX {
+                constructor() {
+                    this.ctx = null;
+                    this.muted = false;
+                }
+
+                init() {
+                    try {
+                        if (!this.ctx) {
+                            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                            if (AudioCtx) this.ctx = new AudioCtx();
+                        }
+                        if (this.ctx && this.ctx.state === 'suspended') {
+                            this.ctx.resume().catch(() => {});
+                        }
+                    } catch (e) {}
+                }
+
+                // 콕콕 찌르기 팝 사운드
+                playPoke(pitch = 1.0) {
+                    if (this.muted) return;
+                    try {
+                        this.init();
+                        if (!this.ctx) return;
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(340 * pitch, now);
+                        osc.frequency.exponentialRampToValueAtTime(720 * pitch, now + 0.09);
+                        gain.gain.setValueAtTime(0.24, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.11);
+                    } catch (e) {}
+                }
+
+                // 볼 늘리기 탄성 사운드 (잡을 때 / 놓을 때 띠용~)
+                playBoing(stretchAmount = 1.0, pitch = 1.0) {
+                    if (this.muted) return;
+                    try {
+                        this.init();
+                        if (!this.ctx) return;
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        const startFreq = (220 + stretchAmount * 180) * pitch;
+                        osc.frequency.setValueAtTime(startFreq, now);
+                        osc.frequency.exponentialRampToValueAtTime(160 * pitch, now + 0.12);
+                        osc.frequency.exponentialRampToValueAtTime(420 * pitch, now + 0.28);
+                        gain.gain.setValueAtTime(0.24, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.31);
+                    } catch (e) {}
+                }
+
+                // 쓰다듬기 포근한 벨 소리
+                playPurr(pitch = 1.0) {
+                    if (this.muted) return;
+                    try {
+                        this.init();
+                        if (!this.ctx) return;
+                        const now = this.ctx.currentTime;
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        const notes = [523.25, 659.25, 783.99];
+                        const freq = notes[Math.floor(Math.random() * notes.length)] * pitch;
+                        osc.frequency.setValueAtTime(freq, now);
+                        osc.frequency.exponentialRampToValueAtTime(freq * 1.15, now + 0.16);
+                        gain.gain.setValueAtTime(0.14, now);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.19);
+                    } catch (e) {}
+                }
+
+                // 뿅망치 삑! 소리
+                playBonk(pitch = 1.0) {
+                    if (this.muted) return;
+                    try {
+                        this.init();
+                        if (!this.ctx) return;
+                        const now = this.ctx.currentTime;
+
+                        // 타격 저음
+                        const osc1 = this.ctx.createOscillator();
+                        const gain1 = this.ctx.createGain();
+                        osc1.type = 'triangle';
+                        osc1.frequency.setValueAtTime(190, now);
+                        osc1.frequency.exponentialRampToValueAtTime(65, now + 0.14);
+                        gain1.gain.setValueAtTime(0.3, now);
+                        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                        osc1.connect(gain1);
+                        gain1.connect(this.ctx.destination);
+                        osc1.start(now);
+                        osc1.stop(now + 0.16);
+
+                        // 뿅망치 고음 삑!
+                        const osc2 = this.ctx.createOscillator();
+                        const gain2 = this.ctx.createGain();
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(680 * pitch, now + 0.03);
+                        osc2.frequency.exponentialRampToValueAtTime(1150 * pitch, now + 0.13);
+                        gain2.gain.setValueAtTime(0.22, now + 0.03);
+                        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+                        osc2.connect(gain2);
+                        gain2.connect(this.ctx.destination);
+                        osc2.start(now + 0.03);
+                        osc2.stop(now + 0.17);
+                    } catch (e) {}
+                }
+            }
+
+            /**
+             * ============================================================================
+             * 3. 상태 및 스프링-댐퍼 물리 엔진 설정
+             * ============================================================================
+             */
+            const canvas = document.getElementById('stageCanvas');
+            const ctx = canvas.getContext('2d');
+            const sfx = new SoundFX();
+
+            let activeCharId = 'usagi';
+            let activeTool = 'poke'; // 'poke', 'pinch', 'pat', 'hammer'
+            let reactionCount = 0;
+            let gaugeValue = 0;
+            let lastTime = 0;
+
+            // 캐릭터 물리 & 표정 상태 객체
+            const rig = {
+                baseX: 0,
+                baseY: 0,
+                scale: 2.35, // 큼직하고 말랑한 비율
+                // 위치 스프링 오프셋
+                offX: 0,
+                offY: 0,
+                velX: 0,
+                velY: 0,
+                // 스케일(찌그러짐/늘어남) 스프링
+                sx: 1,
+                sy: 1,
+                vsx: 0,
+                vsy: 0,
+                // 회전 스프링
+                rot: 0,
+                vrot: 0,
+                // 볼 늘리기(Pinch & Stretch) 스프링
+                cheekSide: 0, // -1: 왼쪽 볼, 1: 오른쪽 볼
+                cheekPullX: 0,
+                cheekPullY: 0,
+                vCheekX: 0,
+                vCheekY: 0,
+                // 표정 상태: 'normal', 'poked', 'pinched', 'happy', 'dizzy', 'crying'
+                mood: 'normal',
+                moodTimer: 0,
+                idlePhase: 0,
+                patRubDistance: 0
+            };
+
+            // 포인터 / 터치 드래그 상태
+            const pointer = {
+                isDown: false,
+                x: 0,
+                y: 0,
+                prevX: 0,
+                prevY: 0,
+                isPinchingCheek: false,
+                pinchStartX: 0,
+                pinchStartY: 0
+            };
+
+            let particles = [];
+            let speechBubbles = [];
+            let hammerVisual = null; // 뿅망치 타격 연출용
+
+            function drawRoundedRect(targetCtx, x, y, w, h, r) {
+                const rad = Math.min(r, w / 2, h / 2);
+                targetCtx.beginPath();
+                targetCtx.moveTo(x + rad, y);
+                targetCtx.arcTo(x + w, y, x + w, y + h, rad);
+                targetCtx.arcTo(x + w, y + h, x, y + h, rad);
+                targetCtx.arcTo(x, y + h, x, y, rad);
+                targetCtx.arcTo(x, y, x + w, y, rad);
+                targetCtx.closePath();
+            }
+
+            function resizeStage() {
+                const parent = canvas.parentElement;
+                if (!parent) return;
+                canvas.width = parent.clientWidth || 400;
+                canvas.height = parent.clientHeight || 520;
+                rig.baseX = canvas.width / 2;
+                rig.baseY = canvas.height * 0.72;
+                rig.scale = Math.min(2.65, Math.max(1.85, Math.min(canvas.width, canvas.height) / 220));
+            }
+
+            /**
+             * ============================================================================
+             * 4. 3인 캐릭터 말랑말랑 벡터 드로잉 (탄성 볼 변형 & 표정 반영)
+             * ============================================================================
+             */
+            function drawUsagiEar(targetCtx, x, y, angle, bodyColor, innerColor, outlineColor) {
+                targetCtx.save();
+                targetCtx.translate(x, y);
+                targetCtx.rotate(angle);
+
+                targetCtx.fillStyle = bodyColor;
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.1;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-4.8, 2);
+                targetCtx.bezierCurveTo(-5.8, -12, -5.2, -25, 0, -25.5);
+                targetCtx.bezierCurveTo(5.2, -25, 5.8, -12, 4.8, 2);
+                targetCtx.fill();
+                targetCtx.stroke();
+
+                targetCtx.fillStyle = innerColor;
+                targetCtx.beginPath();
+                targetCtx.ellipse(0, -11, 2.5, 11.5, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                targetCtx.restore();
+            }
+
+            // 탄성 볼 돌출부를 몸통 윤곽과 자연스럽게 합쳐 그리는 헬퍼
+            function drawElasticCheekBulge(targetCtx, side, pullX, pullY, fillColor, outlineColor) {
+                if (side === 0 || (Math.abs(pullX) < 0.5 && Math.abs(pullY) < 0.5)) return;
+                const anchorX = side * 22;
+                const anchorY = -30;
+                const tipX = anchorX + pullX;
+                const tipY = anchorY + pullY;
+
+                targetCtx.save();
+                targetCtx.fillStyle = fillColor;
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.2;
+
+                targetCtx.beginPath();
+                targetCtx.moveTo(anchorX - side * 4, anchorY - 10);
+                targetCtx.bezierCurveTo(
+                    anchorX + pullX * 0.6, anchorY - 11 + pullY * 0.5,
+                    tipX + side * 6, tipY - 7,
+                    tipX + side * 7, tipY
+                );
+                targetCtx.bezierCurveTo(
+                    tipX + side * 6, tipY + 7,
+                    anchorX + pullX * 0.6, anchorY + 11 + pullY * 0.5,
+                    anchorX - side * 4, anchorY + 10
+                );
+                targetCtx.fill();
+                targetCtx.stroke();
+
+                // 외곽선 안쪽 이음새 부드럽게 덮기
+                targetCtx.fillStyle = fillColor;
+                targetCtx.beginPath();
+                targetCtx.ellipse(anchorX - side * 3, anchorY, 6, 9, 0, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.restore();
+            }
+
+            // 공통 표정(눈·입·눈물·어지러움) 렌더링
+            function drawCharacterExpression(targetCtx, charId, mood, outlineColor) {
+                // 볼터치 (볼 늘리기 시 함께 당겨짐)
+                [-14.5, 14.5].forEach((baseCx, idx) => {
+                    const side = idx === 0 ? -1 : 1;
+                    const pullFactor = rig.cheekSide === side ? 0.55 : 0;
+                    const cx = baseCx + rig.cheekPullX * pullFactor;
+                    const cy = -31 + rig.cheekPullY * pullFactor;
+
+                    targetCtx.fillStyle = '#f7b5c4';
+                    targetCtx.beginPath();
+                    targetCtx.ellipse(cx, cy, 5.5, 3.5, 0, 0, Math.PI * 2);
+                    targetCtx.fill();
+
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 1.5;
+                    const slashCount = charId === 'usagi' ? 4 : 3;
+                    const startI = -(slashCount - 1) / 2;
+                    for (let i = 0; i < slashCount; i++) {
+                        const lx = cx + (startI + i) * 2.15;
+                        targetCtx.beginPath();
+                        targetCtx.moveTo(lx + 0.7, cy - 1.5);
+                        targetCtx.lineTo(lx - 0.7, cy + 1.5);
+                        targetCtx.stroke();
+                    }
+                });
+
+                // 1) 뿅망치 맞아서 어지러운 눈 (빙글빙글 소용돌이)
+                if (mood === 'dizzy') {
+                    const spin = performance.now() * 0.012;
+                    [-8.5, 8.5].forEach((ex, idx) => {
+                        const ey = -36.5;
+                        targetCtx.strokeStyle = outlineColor;
+                        targetCtx.lineWidth = 2.0;
+                        targetCtx.beginPath();
+                        for (let a = 0; a < Math.PI * 3.5; a += 0.35) {
+                            const r = (a / (Math.PI * 3.5)) * 4.3;
+                            const dir = idx === 0 ? 1 : -1;
+                            const px = ex + Math.cos(a * dir + spin) * r;
+                            const py = ey + Math.sin(a * dir + spin) * r;
+                            if (a === 0) targetCtx.moveTo(px, py);
+                            else targetCtx.lineTo(px, py);
+                        }
+                        targetCtx.stroke();
+                    });
+
+                    // 물결치는 어지러운 입
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-4, -29);
+                    targetCtx.quadraticCurveTo(-2, -31.5, 0, -29);
+                    targetCtx.quadraticCurveTo(2, -26.5, 4, -29);
+                    targetCtx.stroke();
+                    return;
+                }
+
+                // 2) 콕콕 찔리거나 볼 잡혀서 질끈 감은 눈 (> <)
+                if (mood === 'poked' || mood === 'pinched') {
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 2.5;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-11.5, -39.5);
+                    targetCtx.lineTo(-6.5, -36.5);
+                    targetCtx.lineTo(-11.5, -33.5);
+                    targetCtx.moveTo(11.5, -39.5);
+                    targetCtx.lineTo(6.5, -36.5);
+                    targetCtx.lineTo(11.5, -33.5);
+                    targetCtx.stroke();
+
+                    // 놀라서 벌린 입 (O 또는 ㅅ)
+                    targetCtx.fillStyle = '#f28b9c';
+                    targetCtx.beginPath();
+                    targetCtx.ellipse(0, -29.2, 2.8, 3.4, 0, 0, Math.PI * 2);
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                    return;
+                }
+
+                // 3) 쓰다듬기 받아서 행복한 웃음 눈 (^ ^)
+                if (mood === 'happy') {
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 2.7;
+                    targetCtx.beginPath();
+                    targetCtx.arc(-8.5, -34.5, 3.8, Math.PI * 1.12, Math.PI * 1.88);
+                    targetCtx.stroke();
+                    targetCtx.beginPath();
+                    targetCtx.arc(8.5, -34.5, 3.8, Math.PI * 1.12, Math.PI * 1.88);
+                    targetCtx.stroke();
+
+                    // 활짝 웃는 입
+                    targetCtx.lineWidth = 2.2;
+                    targetCtx.beginPath();
+                    targetCtx.arc(-2.0, -31.5, 2.0, 0.05 * Math.PI, 0.95 * Math.PI);
+                    targetCtx.stroke();
+                    targetCtx.beginPath();
+                    targetCtx.arc(2.0, -31.5, 2.0, 0.05 * Math.PI, 0.95 * Math.PI);
+                    targetCtx.stroke();
+
+                    targetCtx.fillStyle = '#f28b9c';
+                    targetCtx.beginPath();
+                    targetCtx.arc(0, -29.3, 3.0, 0, Math.PI);
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                    return;
+                }
+
+                // 4) 기본 표정 (치이카와는 기본 웃는 눈, 우사기/하치와레는 초롱초롱 큰 눈)
+                if (charId === 'chiikawa') {
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 2.7;
+                    targetCtx.beginPath();
+                    targetCtx.arc(-8.5, -34.2, 3.6, Math.PI * 1.15, Math.PI * 1.85);
+                    targetCtx.stroke();
+                    targetCtx.beginPath();
+                    targetCtx.arc(8.5, -34.2, 3.6, Math.PI * 1.15, Math.PI * 1.85);
+                    targetCtx.stroke();
+                } else {
+                    [-8.4, 8.4].forEach(ex => {
+                        const ey = -36.5;
+                        targetCtx.fillStyle = outlineColor;
+                        targetCtx.beginPath();
+                        targetCtx.ellipse(ex, ey, 3.8, 4.1, 0, 0, Math.PI * 2);
+                        targetCtx.fill();
+
+                        targetCtx.fillStyle = '#FFFFFF';
+                        targetCtx.beginPath();
+                        targetCtx.ellipse(ex - 0.5, ey - 1.2, 2.0, 1.5, 0, 0, Math.PI * 2);
+                        targetCtx.fill();
+
+                        targetCtx.beginPath();
+                        targetCtx.ellipse(ex + 0.5, ey + 1.6, 1.4, 0.85, 0, 0, Math.PI * 2);
+                        targetCtx.fill();
+                    });
+                }
+
+                // 기본 입 모양
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 2.2;
+                if (charId === 'usagi') {
+                    targetCtx.fillStyle = outlineColor;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-1.8, -33.2);
+                    targetCtx.lineTo(1.8, -33.2);
+                    targetCtx.lineTo(0, -31.4);
+                    targetCtx.closePath();
+                    targetCtx.fill();
+
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, -32.2);
+                    targetCtx.lineTo(0, -30.6);
+                    targetCtx.stroke();
+                }
+                targetCtx.beginPath();
+                targetCtx.arc(-2.0, -31.0, 2.0, 0.05 * Math.PI, 0.95 * Math.PI);
+                targetCtx.stroke();
+                targetCtx.beginPath();
+                targetCtx.arc(2.0, -31.0, 2.0, 0.05 * Math.PI, 0.95 * Math.PI);
+                targetCtx.stroke();
+
+                targetCtx.lineWidth = 1.9;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-1.5, -26.0);
+                targetCtx.lineTo(1.5, -26.0);
+                targetCtx.stroke();
+            }
+
+            // 4-1. 우사기 렌더링
+            function drawUsagi(targetCtx) {
+                const outlineColor = '#3b2314';
+                const bodyColor = '#fff4c2';
+                const earInnerColor = '#f7b5c4';
+                const earWiggle = Math.sin(rig.idlePhase * 2.2) * 0.05 + rig.rot * 0.4;
+
+                targetCtx.lineCap = 'round';
+                targetCtx.lineJoin = 'round';
+
+                drawUsagiEar(targetCtx, -6.5, -51, -0.04 - earWiggle, bodyColor, earInnerColor, outlineColor);
+                drawUsagiEar(targetCtx, 6.5, -51, 0.04 + earWiggle, bodyColor, earInnerColor, outlineColor);
+
+                // 몸통 & 두 다리
+                targetCtx.fillStyle = bodyColor;
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-4, -52);
+                targetCtx.bezierCurveTo(18, -53, 27, -43, 26, -30);
+                targetCtx.bezierCurveTo(26, -24, 21, -21, 20, -17);
+                targetCtx.lineTo(20, -5);
+                targetCtx.bezierCurveTo(20, -1, 14, -1, 14, -5);
+                targetCtx.lineTo(13, -10);
+                targetCtx.quadraticCurveTo(0, -8.5, -13, -10);
+                targetCtx.lineTo(-14, -5);
+                targetCtx.bezierCurveTo(-14, -1, -20, -1, -20, -5);
+                targetCtx.lineTo(-20, -17);
+                targetCtx.bezierCurveTo(-21, -21, -26, -24, -26, -30);
+                targetCtx.bezierCurveTo(-27, -43, -18, -53, 4, -52);
+                targetCtx.stroke();
+                targetCtx.fill();
+
+                targetCtx.fillStyle = bodyColor;
+                targetCtx.fillRect(-10, -52.5, 20, 4);
+
+                // 볼 늘리기 돌출부
+                drawElasticCheekBulge(targetCtx, rig.cheekSide, rig.cheekPullX, rig.cheekPullY, bodyColor, outlineColor);
+
+                // 양팔 (반응에 따라 만세!)
+                const armUp = (rig.mood === 'poked' || rig.mood === 'dizzy' || rig.mood === 'happy') ? -1.8 : 0;
+                [
+                    { x: -21, angle: armUp, dir: -1 },
+                    { x: 21, angle: -armUp, dir: 1 }
+                ].forEach(arm => {
+                    targetCtx.save();
+                    targetCtx.translate(arm.x, -23);
+                    targetCtx.rotate(arm.angle);
+                    targetCtx.fillStyle = bodyColor;
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 3.0;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, 0);
+                    targetCtx.bezierCurveTo(arm.dir * 3.5, 3, arm.dir * 3.5, 9, arm.dir * 0.5, 9.5);
+                    targetCtx.bezierCurveTo(-arm.dir * 2, 10, -arm.dir * 2.5, 5, -arm.dir * 1.5, 1);
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                    targetCtx.restore();
+                });
+
+                // 눈썹
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 2.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-14.5, -41.5);
+                targetCtx.quadraticCurveTo(-11.5, -45.5, -7.5, -44.5);
+                targetCtx.moveTo(7.5, -44.5);
+                targetCtx.quadraticCurveTo(11.5, -45.5, 14.5, -41.5);
+                targetCtx.stroke();
+
+                drawCharacterExpression(targetCtx, 'usagi', rig.mood, outlineColor);
+            }
+
+            // 4-2. 치이카와 렌더링
+            function drawChiikawa(targetCtx) {
+                const outlineColor = '#3b2314';
+                const bodyColor = '#ffffff';
+
+                targetCtx.lineCap = 'round';
+                targetCtx.lineJoin = 'round';
+
+                targetCtx.fillStyle = bodyColor;
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.3;
+
+                // 왼쪽 & 오른쪽 둥근 귀
+                targetCtx.beginPath();
+                targetCtx.arc(-15, -49, 6.2, Math.PI * 0.78, Math.PI * 2.12);
+                targetCtx.fill();
+                targetCtx.stroke();
+
+                targetCtx.beginPath();
+                targetCtx.arc(15, -49, 6.2, Math.PI * 0.88, Math.PI * 2.22);
+                targetCtx.fill();
+                targetCtx.stroke();
+
+                // 통통한 둥근 몸통
+                targetCtx.beginPath();
+                targetCtx.moveTo(-10, -51);
+                targetCtx.quadraticCurveTo(0, -53, 10, -51);
+                targetCtx.bezierCurveTo(25, -48, 29, -35, 26, -22);
+                targetCtx.bezierCurveTo(24, -14, 19, -10, 14, -9);
+                targetCtx.lineTo(14, -4.5);
+                targetCtx.bezierCurveTo(14, -1, 8.5, -1, 8.5, -4.5);
+                targetCtx.lineTo(8.5, -8.5);
+                targetCtx.quadraticCurveTo(0, -7.5, -8.5, -8.5);
+                targetCtx.lineTo(-8.5, -4.5);
+                targetCtx.bezierCurveTo(-8.5, -1, -14, -1, -14, -4.5);
+                targetCtx.lineTo(-14, -9);
+                targetCtx.bezierCurveTo(-19, -10, -24, -14, -26, -22);
+                targetCtx.bezierCurveTo(-29, -35, -25, -48, -10, -51);
+                targetCtx.fill();
+                targetCtx.stroke();
+
+                targetCtx.fillStyle = bodyColor;
+                targetCtx.beginPath();
+                targetCtx.ellipse(-14, -47, 5, 3, -0.3, 0, Math.PI * 2);
+                targetCtx.ellipse(14, -47, 5, 3, 0.3, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                drawElasticCheekBulge(targetCtx, rig.cheekSide, rig.cheekPullX, rig.cheekPullY, bodyColor, outlineColor);
+
+                // 양팔
+                const armUp = (rig.mood === 'poked' || rig.mood === 'dizzy' || rig.mood === 'happy') ? -1.7 : 0;
+                [
+                    { x: -24, angle: armUp, dir: -1 },
+                    { x: 24, angle: -armUp, dir: 1 }
+                ].forEach(arm => {
+                    targetCtx.save();
+                    targetCtx.translate(arm.x, -23);
+                    targetCtx.rotate(arm.angle);
+                    targetCtx.fillStyle = bodyColor;
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 3.2;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, -2);
+                    targetCtx.bezierCurveTo(arm.dir * 6, -1, arm.dir * 6.5, 5, arm.dir * 0.5, 6);
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                    targetCtx.restore();
+                });
+
+                // 눈썹
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 2.4;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-11.5, -42.5);
+                targetCtx.quadraticCurveTo(-9, -43.5, -7, -42.5);
+                targetCtx.moveTo(7, -42.5);
+                targetCtx.quadraticCurveTo(9, -43.5, 11.5, -42.5);
+                targetCtx.stroke();
+
+                drawCharacterExpression(targetCtx, 'chiikawa', rig.mood, outlineColor);
+            }
+
+            // 4-3. 하치와레 렌더링
+            function drawHachiware(targetCtx) {
+                const outlineColor = '#3b2314';
+                const bodyColor = '#ffffff';
+                const blueGrey = '#6f9cb0';
+
+                targetCtx.lineCap = 'round';
+                targetCtx.lineJoin = 'round';
+
+                // 살랑거리는 꼬리
+                const tailWag = Math.sin(rig.idlePhase * 3.0) * 0.25;
+                targetCtx.save();
+                targetCtx.translate(-21, -14);
+                targetCtx.rotate(tailWag);
+                targetCtx.fillStyle = blueGrey;
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(0, 0);
+                targetCtx.bezierCurveTo(-9, 1, -13, -6, -8, -9.5);
+                targetCtx.bezierCurveTo(-4, -11, -1, -6, 1, -3);
+                targetCtx.fill();
+                targetCtx.stroke();
+                targetCtx.restore();
+
+                // 고양이 귀 + 몸통 경로 정의
+                const traceBody = () => {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(-15, -57);
+                    targetCtx.quadraticCurveTo(-7, -56, -2, -50.5);
+                    targetCtx.quadraticCurveTo(0, -50, 2, -50.5);
+                    targetCtx.quadraticCurveTo(7, -56, 15, -57);
+                    targetCtx.bezierCurveTo(21, -55, 22, -46, 22, -42);
+                    targetCtx.bezierCurveTo(28, -36, 28, -21, 21, -13);
+                    targetCtx.lineTo(14, -9.5);
+                    targetCtx.lineTo(14, -4.5);
+                    targetCtx.bezierCurveTo(14, -1, 8.5, -1, 8.5, -4.5);
+                    targetCtx.lineTo(8.5, -8.5);
+                    targetCtx.quadraticCurveTo(0, -7.5, -8.5, -8.5);
+                    targetCtx.lineTo(-8.5, -4.5);
+                    targetCtx.bezierCurveTo(-8.5, -1, -14, -1, -14, -4.5);
+                    targetCtx.lineTo(-14, -9.5);
+                    targetCtx.bezierCurveTo(-21, -13, -28, -21, -28, -36);
+                    targetCtx.bezierCurveTo(-22, -42, -21, -55, -15, -57);
+                    targetCtx.closePath();
+                };
+
+                targetCtx.fillStyle = bodyColor;
+                traceBody();
+                targetCtx.fill();
+
+                // 블루그레이 M자 가르마 머리 무늬
+                targetCtx.save();
+                traceBody();
+                targetCtx.clip();
+                targetCtx.fillStyle = blueGrey;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-26, -62);
+                targetCtx.lineTo(26, -62);
+                targetCtx.lineTo(25, -41);
+                targetCtx.quadraticCurveTo(12, -40, 1.5, -46.5);
+                targetCtx.lineTo(0, -48);
+                targetCtx.lineTo(-1.5, -46.5);
+                targetCtx.quadraticCurveTo(-12, -40, -25, -41);
+                targetCtx.closePath();
+                targetCtx.fill();
+
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.2;
+                targetCtx.beginPath();
+                targetCtx.moveTo(-24, -41.5);
+                targetCtx.quadraticCurveTo(-11, -39.5, -1.2, -46.2);
+                targetCtx.lineTo(0, -47.5);
+                targetCtx.lineTo(1.2, -46.2);
+                targetCtx.quadraticCurveTo(11, -39.5, 24, -41.5);
+                targetCtx.stroke();
+                targetCtx.restore();
+
+                // 외곽선 마감
+                targetCtx.strokeStyle = outlineColor;
+                targetCtx.lineWidth = 3.3;
+                traceBody();
+                targetCtx.stroke();
+
+                drawElasticCheekBulge(targetCtx, rig.cheekSide, rig.cheekPullX, rig.cheekPullY, bodyColor, outlineColor);
+
+                // 양팔
+                const armUp = (rig.mood === 'poked' || rig.mood === 'dizzy' || rig.mood === 'happy') ? -1.7 : 0;
+                [
+                    { x: -24, angle: armUp, dir: -1 },
+                    { x: 24, angle: -armUp, dir: 1 }
+                ].forEach(arm => {
+                    targetCtx.save();
+                    targetCtx.translate(arm.x, -23);
+                    targetCtx.rotate(arm.angle);
+                    targetCtx.fillStyle = bodyColor;
+                    targetCtx.strokeStyle = outlineColor;
+                    targetCtx.lineWidth = 3.2;
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(0, -2);
+                    targetCtx.bezierCurveTo(arm.dir * 6, -1, arm.dir * 6.5, 5, arm.dir * 0.5, 6);
+                    targetCtx.fill();
+                    targetCtx.stroke();
+                    targetCtx.restore();
+                });
+
+                // 점 눈썹
+                targetCtx.fillStyle = outlineColor;
+                targetCtx.beginPath();
+                targetCtx.arc(-8.5, -41.5, 1.3, 0, Math.PI * 2);
+                targetCtx.arc(8.5, -41.5, 1.3, 0, Math.PI * 2);
+                targetCtx.fill();
+
+                drawCharacterExpression(targetCtx, 'hachiware', rig.mood, outlineColor);
+            }
+
+            /**
+             * ============================================================================
+             * 5. 인터랙션 히트박스 & 4종 도구(찌르기/볼늘리기/쓰다듬기/뿅망치) 처리
+             * ============================================================================
+             */
+            function getPointerPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            }
+
+            // 로컬 좌표로 변환해 캐릭터 몸통/얼굴/머리 위 판정
+            function getHitZone(px, py) {
+                const cx = rig.baseX + rig.offX;
+                const cy = rig.baseY + rig.offY;
+                const localX = (px - cx) / rig.scale;
+                const localY = (py - cy) / rig.scale;
+
+                const isInBody = Math.abs(localX) <= 34 && localY >= -76 && localY <= 4;
+                const isHeadTop = Math.abs(localX) <= 32 && localY >= -82 && localY <= -34;
+                const isCheekZone = Math.abs(localX) <= 38 && localY >= -48 && localY <= -12;
+
+                return { localX, localY, isInBody, isHeadTop, isCheekZone };
+            }
+
+            function addReaction(gaugeDelta, moodName, duration, customLine = null) {
+                reactionCount++;
+                gaugeValue = Math.min(100, gaugeValue + gaugeDelta);
+                if (gaugeValue >= 100) {
+                    // 게이지가 100% 차면 하트 폭죽 보너스 후 리셋
+                    spawnParticles(rig.baseX + rig.offX, rig.baseY + rig.offY - 40 * rig.scale, '💖', 12);
+                    gaugeValue = 0;
+                }
+
+                document.getElementById('reaction-counter').textContent = `장난 ${reactionCount}회`;
+                document.getElementById('tease-gauge-bar').style.width = `${gaugeValue}%`;
+
+                rig.mood = moodName;
+                rig.moodTimer = duration;
+
+                const lines = CHARACTERS[activeCharId].lines[activeTool];
+                const text = customLine || lines[Math.floor(Math.random() * lines.length)];
+                if (speechBubbles.length > 2) speechBubbles.shift();
+                speechBubbles.push({
+                    x: rig.baseX + rig.offX + (Math.random() - 0.5) * 40,
+                    y: rig.baseY + rig.offY - 65 * rig.scale,
+                    text: text,
+                    life: 1.05
+                });
+            }
+
+            function spawnParticles(x, y, emoji, count = 6) {
+                for (let i = 0; i < count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = 70 + Math.random() * 140;
+                    particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 60,
+                        emoji: emoji,
+                        size: 16 + Math.random() * 8,
+                        life: 0.65 + Math.random() * 0.25,
+                        maxLife: 0.9
+                    });
+                }
+            }
+
+            function onPointerDown(e) {
+                e.preventDefault();
+                sfx.init();
+                const pos = getPointerPos(e);
+                pointer.isDown = true;
+                pointer.x = pos.x;
+                pointer.y = pos.y;
+                pointer.prevX = pos.x;
+                pointer.prevY = pos.y;
+
+                const hit = getHitZone(pos.x, pos.y);
+                const pitch = CHARACTERS[activeCharId].pitch;
+
+                // 1) 콕콕 찌르기 (Poke)
+                if (activeTool === 'poke' && hit.isInBody) {
+                    const dirX = hit.localX >= 0 ? -1 : 1;
+                    rig.vsx += -11;
+                    rig.vsy += 11;
+                    rig.velX += dirX * 260;
+                    rig.vrot += dirX * 4.5;
+                    sfx.playPoke(pitch);
+                    spawnParticles(pos.x, pos.y, '✨', 6);
+                    addReaction(8, 'poked', 0.75);
+                }
+
+                // 2) 볼 늘리기 시작 (Pinch & Stretch)
+                if (activeTool === 'pinch' && hit.isCheekZone) {
+                    pointer.isPinchingCheek = true;
+                    pointer.pinchStartX = pos.x;
+                    pointer.pinchStartY = pos.y;
+                    rig.cheekSide = hit.localX >= 0 ? 1 : -1;
+                    rig.mood = 'pinched';
+                    rig.moodTimer = 2.0;
+                    sfx.playPoke(pitch * 0.9);
+                }
+
+                // 3) 뿅망치 때리기 (Toy Hammer Bonk)
+                if (activeTool === 'hammer' && hit.isInBody) {
+                    const knockDir = hit.localX >= 0 ? -1 : 1;
+                    rig.vsx += 18;
+                    rig.vsy += -20;
+                    rig.velY = -540;
+                    rig.velX = knockDir * 340;
+                    rig.vrot = knockDir * 11;
+
+                    hammerVisual = {
+                        x: pos.x,
+                        y: pos.y,
+                        timer: 0.28
+                    };
+
+                    sfx.playBonk(pitch);
+                    spawnParticles(pos.x, pos.y, '💫', 8);
+                    spawnParticles(pos.x, pos.y, '💥', 3);
+                    addReaction(15, 'dizzy', 1.4);
+                }
+            }
+
+            function onPointerMove(e) {
+                if (!pointer.isDown) return;
+                e.preventDefault();
+                const pos = getPointerPos(e);
+                const dx = pos.x - pointer.prevX;
+                const dy = pos.y - pointer.prevY;
+                pointer.x = pos.x;
+                pointer.y = pos.y;
+
+                // 볼 늘리기 드래그 중
+                if (activeTool === 'pinch' && pointer.isPinchingCheek) {
+                    const pullX = (pos.x - pointer.pinchStartX) / rig.scale;
+                    const pullY = (pos.y - pointer.pinchStartY) / rig.scale;
+                    // 최대 탄성 한계 제한
+                    rig.cheekPullX = Math.max(-22, Math.min(22, pullX * 0.85));
+                    rig.cheekPullY = Math.max(-14, Math.min(14, pullY * 0.85));
+                    rig.vCheekX = 0;
+                    rig.vCheekY = 0;
+                    rig.mood = 'pinched';
+                    rig.moodTimer = 0.5;
+                }
+
+                // 쓰다듬기 문지르기 중
+                if (activeTool === 'pat') {
+                    const hit = getHitZone(pos.x, pos.y);
+                    if (hit.isHeadTop || hit.isInBody) {
+                        const dist = Math.hypot(dx, dy);
+                        rig.patRubDistance += dist;
+                        rig.rot = Math.max(-0.18, Math.min(0.18, dx * 0.012));
+                        rig.mood = 'happy';
+                        rig.moodTimer = 0.6;
+
+                        if (rig.patRubDistance > 45) {
+                            rig.patRubDistance = 0;
+                            rig.vsx += 4.5;
+                            rig.vsy += -4.5;
+                            sfx.playPurr(CHARACTERS[activeCharId].pitch);
+                            spawnParticles(pos.x, pos.y - 10, '💕', 3);
+                            addReaction(7, 'happy', 0.9);
+                        }
+                    }
+                }
+
+                pointer.prevX = pos.x;
+                pointer.prevY = pos.y;
+            }
+
+            function onPointerUp(e) {
+                if (pointer.isPinchingCheek) {
+                    const stretchDist = Math.hypot(rig.cheekPullX, rig.cheekPullY);
+                    if (stretchDist > 3) {
+                        sfx.playBoing(stretchDist / 20, CHARACTERS[activeCharId].pitch);
+                        spawnParticles(rig.baseX + rig.offX, rig.baseY + rig.offY - 30 * rig.scale, '💦', 5);
+                        addReaction(12, 'poked', 0.85);
+                    }
+                    pointer.isPinchingCheek = false;
+                }
+                pointer.isDown = false;
+            }
+
+            /**
+             * ============================================================================
+             * 6. 스프링 물리 적분 및 캔버스 렌더링 루프
+             * ============================================================================
+             */
+            function updatePhysics(dt) {
+                rig.idlePhase += dt * 2.5;
+
+                // 위치 스프링 복원 (k = 140, damping = 12)
+                const ax = -140 * rig.offX - 12 * rig.velX;
+                const ay = -140 * rig.offY - 12 * rig.velY;
+                rig.velX += ax * dt;
+                rig.velY += ay * dt;
+                rig.offX += rig.velX * dt;
+                rig.offY += rig.velY * dt;
+
+                // 스케일(말랑 탄성) 스프링 복원 (k = 210, damping = 11)
+                const asx = -210 * (rig.sx - 1) - 11 * rig.vsx;
+                const asy = -210 * (rig.sy - 1) - 11 * rig.vsy;
+                rig.vsx += asx * dt;
+                rig.vsy += asy * dt;
+                rig.sx += rig.vsx * dt;
+                rig.sy += rig.vsy * dt;
+
+                // 회전 스프링 복원
+                const arot = -160 * rig.rot - 11 * rig.vrot;
+                rig.vrot += arot * dt;
+                rig.rot += rig.vrot * dt;
+
+                // 볼 늘리기 스프링 복원 (드래그를 놓으면 띠용~ 하고 진동하며 복귀)
+                if (!pointer.isPinchingCheek) {
+                    const acx = -260 * rig.cheekPullX - 9 * rig.vCheekX;
+                    const acy = -260 * rig.cheekPullY - 9 * rig.vCheekY;
+                    rig.vCheekX += acx * dt;
+                    rig.vCheekY += acy * dt;
+                    rig.cheekPullX += rig.vCheekX * dt;
+                    rig.cheekPullY += rig.vCheekY * dt;
+
+                    if (Math.abs(rig.cheekPullX) < 0.2 && Math.abs(rig.vCheekX) < 0.5) {
+                        rig.cheekPullX = 0;
+                        rig.cheekPullY = 0;
+                        rig.cheekSide = 0;
+                    }
+                }
+
+                // 표정 타이머 복귀
+                if (rig.moodTimer > 0) {
+                    rig.moodTimer -= dt;
+                    if (rig.moodTimer <= 0 && !pointer.isPinchingCheek) {
+                        rig.mood = 'normal';
+                    }
+                }
+
+                // 뿅망치 연출 타이머
+                if (hammerVisual) {
+                    hammerVisual.timer -= dt;
+                    if (hammerVisual.timer <= 0) hammerVisual = null;
+                }
+
+                // 파티클 업데이트
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx * dt;
+                    p.y += p.vy * dt;
+                    p.vy += 180 * dt;
+                    p.life -= dt;
+                    if (p.life <= 0) particles.splice(i, 1);
+                }
+
+                // 말풍선 업데이트
+                for (let i = speechBubbles.length - 1; i >= 0; i--) {
+                    const b = speechBubbles[i];
+                    b.y -= 26 * dt;
+                    b.life -= dt;
+                    if (b.life <= 0) speechBubbles.splice(i, 1);
+                }
+            }
+
+            function renderScene() {
+                const cfg = CHARACTERS[activeCharId];
+                const w = canvas.width;
+                const h = canvas.height;
+
+                // 파스텔 그라데이션 배경
+                const bgGrad = ctx.createLinearGradient(0, 0, 0, h);
+                bgGrad.addColorStop(0, cfg.bgTop);
+                bgGrad.addColorStop(1, cfg.bgBottom);
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, w, h);
+
+                // 푹신한 방석/바닥 무대
+                const floorY = rig.baseY + 8;
+                ctx.fillStyle = cfg.floorColor;
+                ctx.strokeStyle = '#3b2314';
+                ctx.lineWidth = 3.5;
+                ctx.beginPath();
+                ctx.ellipse(rig.baseX, floorY + 12, Math.min(w * 0.42, 220), 42, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // 캐릭터 발 아래 그림자
+                ctx.fillStyle = 'rgba(59, 35, 20, 0.18)';
+                ctx.beginPath();
+                ctx.ellipse(rig.baseX + rig.offX, floorY, 34 * rig.scale * 0.75, 11, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 캐릭터 본체 렌더링
+                const breatheY = Math.sin(rig.idlePhase) * 0.025;
+                ctx.save();
+                ctx.translate(rig.baseX + rig.offX, rig.baseY + rig.offY);
+                ctx.rotate(rig.rot);
+                ctx.scale(rig.scale * rig.sx * (1 - breatheY * 0.5), rig.scale * rig.sy * (1 + breatheY));
+
+                if (activeCharId === 'chiikawa') {
+                    drawChiikawa(ctx);
+                } else if (activeCharId === 'hachiware') {
+                    drawHachiware(ctx);
+                } else {
+                    drawUsagi(ctx);
+                }
+                ctx.restore();
+
+                // 파티클 이모지
+                particles.forEach(p => {
+                    ctx.save();
+                    ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+                    ctx.font = `${Math.round(p.size)}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(p.emoji, p.x, p.y);
+                    ctx.restore();
+                });
+
+                // 뿅망치 타격 이펙트
+                if (hammerVisual) {
+                    ctx.save();
+                    const progress = 1 - hammerVisual.timer / 0.28;
+                    ctx.translate(hammerVisual.x + 25, hammerVisual.y - 25);
+                    ctx.rotate(-0.8 + progress * 1.1);
+                    ctx.font = '54px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('🔨', 0, 0);
+                    ctx.restore();
+                }
+
+                // 손그림 스타일 말풍선
+                speechBubbles.forEach(b => {
+                    ctx.save();
+                    ctx.globalAlpha = Math.min(1, b.life * 2.2);
+                    ctx.translate(b.x, b.y);
+                    ctx.font = '900 17px sans-serif';
+                    const tw = ctx.measureText(b.text).width;
+                    const bw = tw + 26;
+                    const bh = 34;
+
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.strokeStyle = '#3b2314';
+                    ctx.lineWidth = 2.8;
+                    drawRoundedRect(ctx, -bw / 2, -bh / 2, bw, bh, 14);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(-5, bh / 2);
+                    ctx.lineTo(0, bh / 2 + 7);
+                    ctx.lineTo(5, bh / 2);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#3b2314';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(b.text, 0, 1);
+                    ctx.restore();
+                });
+            }
+
+            function loop(timestamp) {
+                const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+                lastTime = timestamp;
+                updatePhysics(dt);
+                renderScene();
+                requestAnimationFrame(loop);
+            }
+
+            /**
+             * ============================================================================
+             * 7. UI 이벤트 바인딩 및 Window Onload 시작
+             * ============================================================================
+             */
+            function initApp() {
+                resizeStage();
+                window.addEventListener('resize', resizeStage);
+
+                // 상단 캐릭터 탭 전환
+                document.querySelectorAll('.char-tab').forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        sfx.init();
+                        activeCharId = tab.getAttribute('data-char');
+                        document.querySelectorAll('.char-tab').forEach(t => t.classList.remove('active'));
+                        tab.classList.add('active');
+
+                        // 등장 바운스
+                        rig.vsy = -8;
+                        rig.vsx = 8;
+                        rig.mood = 'happy';
+                        rig.moodTimer = 0.8;
+                        sfx.playPurr(CHARACTERS[activeCharId].pitch);
+                    });
+                });
+
+                // 하단 4종 도구 선택
+                document.querySelectorAll('.tool-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        sfx.init();
+                        activeTool = btn.getAttribute('data-tool');
+                        document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        document.getElementById('guide-pill').textContent = TOOL_GUIDES[activeTool];
+                    });
+                });
+
+                // 음소거 토글
+                const muteBtn = document.getElementById('mute-btn');
+                muteBtn.addEventListener('click', () => {
+                    sfx.muted = !sfx.muted;
+                    muteBtn.textContent = sfx.muted ? '🔇' : '🔊';
+                });
+
+                // 마우스 및 모바일 터치 이벤트 연결
+                canvas.addEventListener('mousedown', onPointerDown);
+                window.addEventListener('mousemove', onPointerMove);
+                window.addEventListener('mouseup', onPointerUp);
+
+                canvas.addEventListener('touchstart', onPointerDown, { passive: false });
+                window.addEventListener('touchmove', onPointerMove, { passive: false });
+                window.addEventListener('touchend', onPointerUp, { passive: false });
+                window.addEventListener('touchcancel', onPointerUp, { passive: false });
+
+                lastTime = performance.now();
+                requestAnimationFrame(loop);
+            }
+
+            window.onload = function () {
+                initApp();
+            };
+        })();
+    </script>
+</body>
+</html>
